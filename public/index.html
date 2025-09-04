@@ -1,0 +1,214 @@
+
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Number Lookup</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+    }
+    header {
+      background: #4a90e2;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+    }
+    #backBtn {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      display: none;
+    }
+    main {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 2rem;
+      margin: 1rem;
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+    .invisible { display: none; }
+    .btn {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.7rem 1.5rem;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+    .kv {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      padding: 0.5rem 0;
+    }
+    .kv .k {
+      font-weight: bold;
+    }
+    .error-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 1.2rem;
+    }
+    .monster {
+      font-size: 5rem;
+      margin: 1rem;
+    }
+    pre {
+      text-align: left;
+      background: #eee;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="backBtn" onclick="goHome()">⬅ Back</button>
+    <h1>Number Lookup</h1>
+  </header>
+  <main>
+    <!-- Home page -->
+    <section id="home" class="card">
+      <h2>Enter a Mobile Number</h2>
+      <form id="lookupForm">
+        <input id="numInput" type="text" placeholder="10-digit number" maxlength="10" required>
+        <br>
+        <button type="submit" class="btn">Get Data</button>
+      </form>
+    </section>
+
+    <!-- Results page -->
+    <section id="result" class="card invisible">
+      <h2>Result</h2>
+      <div>
+        <label><input type="checkbox" id="prettyToggle" checked> Pretty-print</label>
+      </div>
+      <div id="resultGrid"></div>
+      <pre id="resultJSON" class="invisible"></pre>
+    </section>
+
+    <!-- Error page -->
+    <section id="error" class="card invisible">
+      <div class="error-hero">
+        <div class="monster">🧟‍♂️</div>
+        <div class="error-title">Invalid input detected!</div>
+        <div class="error-note">That mobile number doesn’t look right. Try again with 10 digits.</div>
+        <button class="btn" onclick="goHome()">Go Home</button>
+      </div>
+    </section>
+  </main>
+
+<script>
+const views = {
+  home: document.getElementById('home'),
+  result: document.getElementById('result'),
+  error: document.getElementById('error'),
+};
+const backBtn = document.getElementById('backBtn');
+const form = document.getElementById('lookupForm');
+const input = document.getElementById('numInput');
+const grid = document.getElementById('resultGrid');
+const pre = document.getElementById('resultJSON');
+const prettyToggle = document.getElementById('prettyToggle');
+
+function show(view) {
+  for (const k in views) {
+    views[k].classList.add('invisible');
+  }
+  views[view].classList.remove('invisible');
+  backBtn.style.display = (view === 'home') ? 'none' : 'inline-flex';
+}
+
+function goHome() {
+  form.reset();
+  input.value = '';
+  grid.innerHTML = '';
+  pre.textContent = '';
+  prettyToggle.checked = true;
+  pre.classList.add('invisible');
+  grid.classList.remove('invisible');
+  show('home');
+}
+goHome();
+
+function isTenDigitNumber(v) {
+  return /^[0-9]{10,12}$/.test(String(v||'').trim());
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
+}
+
+function renderCards(obj) {
+  grid.innerHTML = '';
+  Object.entries(obj).forEach(([k, v]) => {
+    const div = document.createElement('div');
+    div.className = 'kv';
+    div.innerHTML = `<div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const num = input.value.trim();
+  if (!isTenDigitNumber(num)) {
+    show('error');
+    return;
+  }
+  try {
+    // ⚠️ Replace with your hidden proxy later (right now it calls API directly)
+    const url = `/api/lookup?number=${encodeURIComponent(num)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.status === "error") {
+      show('error');
+      return;
+    }
+    renderCards(data[0] || {});
+    pre.textContent = JSON.stringify(data, null, 2);
+    show('result');
+  } catch (err) {
+    show('error');
+  }
+});
+
+prettyToggle.addEventListener('change', () => {
+  if (prettyToggle.checked) {
+    grid.classList.remove('invisible');
+    pre.classList.add('invisible');
+  } else {
+    grid.classList.add('invisible');
+    pre.classList.remove('invisible');
+  }
+});
+</script>
+</body>
+</html>
